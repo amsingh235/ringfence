@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 830" width="1180" height="830" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <title>Ringfence system architecture</title>
+  <desc>Transaction stream feeds an identity graph, which feeds a recall-first ring detector; candidates are scored by a feature engine and GBM, composed with a Vulcan per-transaction score into a gated recommendation, and surfaced through an alert API and dashboard.</desc>
+
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+    </marker>
+    <style>
+      .box   { rx:8; ry:8; stroke-width:1.5; }
+      .t     { font-size:14px; font-weight:600; fill:#0f172a; }
+      .s     { font-size:11.5px; fill:#475569; }
+      .m     { font-size:11px; font-family:ui-monospace,'Cascadia Code',Consolas,monospace; fill:#334155; }
+      .lbl   { font-size:11px; fill:#64748b; font-style:italic; }
+      .flow  { stroke:#64748b; stroke-width:1.8; fill:none; marker-end:url(#a); }
+      .hdr   { font-size:13px; font-weight:700; fill:#1e293b; letter-spacing:.06em; }
+    </style>
+  </defs>
+
+  <!-- explicit light ground so the diagram reads the same in GitHub light and dark -->
+  <rect width="1180" height="830" fill="#ffffff"/>
+
+  <text x="32" y="38" font-size="20" font-weight="700" fill="#0f172a">Ringfence — Abuse-Ring Sentinel</text>
+  <text x="32" y="60" class="s">Track 02 · AI Risk Manager. A two-speed system: the identity graph is batch, the scorer is online.</text>
+
+  <!-- ── row 1 ───────────────────────────────────────────────────────── -->
+  <rect x="32"  y="92" width="228" height="92" class="box" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="50" y="118" class="t">Transaction Stream</text>
+  <text x="50" y="138" class="s">737,000 txns · 2,396 cards</text>
+  <text x="50" y="156" class="s">690 merchants · 5 worlds</text>
+  <text x="50" y="174" class="m">+ simulated Vulcan score</text>
+
+  <rect x="316" y="92" width="228" height="92" class="box" fill="#ede9fe" stroke="#a78bfa"/>
+  <text x="334" y="118" class="t">Identity Graph</text>
+  <text x="334" y="138" class="s">cards ↔ device / IP / email</text>
+  <text x="334" y="156" class="s">collision-capped at 12</text>
+  <text x="334" y="174" class="m">no merchant edges</text>
+
+  <rect x="600" y="92" width="248" height="92" class="box" fill="#ede9fe" stroke="#a78bfa"/>
+  <text x="618" y="118" class="t">Ring Detector</text>
+  <text x="618" y="138" class="s">Louvain ×6 · CC ×4 · ego sets</text>
+  <text x="618" y="156" class="s">recall-first ensemble</text>
+  <text x="618" y="174" class="m">ring recall 0.942</text>
+
+  <line x1="260" y1="138" x2="310" y2="138" class="flow"/>
+  <line x1="544" y1="138" x2="594" y2="138" class="flow"/>
+
+  <!-- ── row 2 ───────────────────────────────────────────────────────── -->
+  <rect x="32"  y="246" width="248" height="104" class="box" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="50" y="272" class="t">Feature Engine</text>
+  <text x="50" y="292" class="s">31 features: 10 structural,</text>
+  <text x="50" y="310" class="s">8 identity, 13 behavioural</text>
+  <text x="50" y="332" class="m">p99 32.9 ms (budget 50)</text>
+
+  <rect x="336" y="246" width="248" height="104" class="box" fill="#dbeafe" stroke="#60a5fa"/>
+  <text x="354" y="272" class="t">Dossier Builder</text>
+  <text x="354" y="292" class="s">deterministic cited evidence,</text>
+  <text x="354" y="310" class="s">then LLM narrative from it</text>
+  <text x="354" y="332" class="m">0 uncited claims — enforced</text>
+
+  <rect x="640" y="246" width="248" height="104" class="box" fill="#dcfce7" stroke="#4ade80"/>
+  <text x="658" y="272" class="t">Case Memory</text>
+  <text x="658" y="292" class="s">confirmed ring → +15% boost</text>
+  <text x="658" y="310" class="s">false positive → −20% damp</text>
+  <text x="658" y="332" class="m">SQLite + vector index</text>
+
+  <path d="M724 184 L724 214 L156 214 L156 240" class="flow"/>
+  <path d="M724 184 L724 214 L460 214 L460 240" class="flow"/>
+  <path d="M724 184 L724 240" class="flow"/>
+
+  <!-- ── row 3 ───────────────────────────────────────────────────────── -->
+  <rect x="32" y="412" width="248" height="86" class="box" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="50" y="438" class="t">GBM Scorer</text>
+  <text x="50" y="458" class="s">LightGBM · leave-one-world-out</text>
+  <text x="50" y="480" class="m">cost-optimal, not F1</text>
+
+  <line x1="156" y1="350" x2="156" y2="406" class="flow"/>
+  <text x="168" y="382" class="lbl">31-dim vector</text>
+
+  <!-- ── vulcan layer ────────────────────────────────────────────────── -->
+  <rect x="32" y="546" width="856" height="118" class="box" fill="#fee2e2" stroke="#f87171" stroke-width="2"/>
+  <text x="52" y="574" class="hdr">VULCAN INTEGRATION LAYER</text>
+  <text x="52" y="598" class="m">composite = 1 − (1 − vulcan) × (1 − ringfence),  then ± bounded case-memory adjustment</text>
+
+  <rect x="52"  y="612" width="164" height="34" rx="6" fill="#dcfce7" stroke="#4ade80"/>
+  <text x="72"  y="634" class="m">&lt; 0.40  APPROVE</text>
+  <rect x="232" y="612" width="188" height="34" rx="6" fill="#fef3c7" stroke="#fbbf24"/>
+  <text x="252" y="634" class="m">0.40–0.70  REVIEW</text>
+  <rect x="436" y="612" width="164" height="34" rx="6" fill="#fecaca" stroke="#f87171"/>
+  <text x="456" y="634" class="m">≥ 0.70  BLOCK</text>
+  <text x="620" y="634" class="s">Automated action requires &gt;10 confirmed precedents</text>
+
+  <path d="M156 498 L156 540" class="flow"/>
+  <path d="M764 350 L764 520 L600 520 L600 540" class="flow"/>
+  <path d="M460 350 L460 520 L300 520 L300 540" class="flow"/>
+
+  <!-- ── outputs ─────────────────────────────────────────────────────── -->
+  <rect x="932" y="546" width="216" height="52" class="box" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="950" y="568" class="t">Alert API</text>
+  <text x="950" y="587" class="s">FastAPI · p99 29 ms</text>
+
+  <rect x="932" y="626" width="216" height="52" class="box" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="950" y="648" class="t">Streamlit Demo</text>
+  <text x="950" y="667" class="s">5 pages · failure recovery</text>
+
+  <line x1="888" y1="572" x2="926" y2="572" class="flow"/>
+  <line x1="1040" y1="598" x2="1040" y2="620" class="flow"/>
+
+  <!-- ── footer ──────────────────────────────────────────────────────── -->
+  <line x1="32" y1="708" x2="1148" y2="708" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="32" y="734" class="hdr">STRICTLY DEFENSE-ONLY</text>
+  <text x="32" y="756" class="s">Ringfence observes and recommends. It cannot block a payment, decline a card, or move money. Every alert carries a</text>
+  <text x="32" y="775" class="s">fully-cited dossier; an uncited claim cannot be constructed. Every degraded path forces REVIEW, never APPROVE.</text>
+  <text x="32" y="802" class="m">Measured on 737k transactions, leave-one-world-out: recall 0.964 · precision 0.869 · F1-optimal threshold would cost 17.0% more</text>
+</svg>

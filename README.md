@@ -1,5 +1,7 @@
 # Ringfence: Abuse-Ring Sentinel for Razorpay
 
+[![Tests](https://github.com/amsingh235/ringfence/actions/workflows/ci.yml/badge.svg)](https://github.com/amsingh235/ringfence/actions/workflows/ci.yml)
+
 > **Track 02 — AI Risk Manager** | Sub-direction: Abuse-ring sentinel
 > Strictly defensive. This system observes and recommends. It cannot block a payment, decline a card, or move money.
 
@@ -86,6 +88,12 @@ attached to every alert.
                        │  Streamlit demo, 5 pages │
                        └──────────────────────────┘
 ```
+
+---
+
+![Ringfence architecture](docs/architecture.svg)
+
+> Also available as plain text: [`docs/architecture.txt`](docs/architecture.txt) · full design document: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 ---
 
@@ -303,7 +311,7 @@ cp .env.example .env          # optional: add OPENAI_API_KEY for the LLM summary
 
 make setup                    # create .venv, install requirements
 make all                      # data → graph → candidates → features → model  (~2 min)
-make test                     # 110 tests
+make test                     # 114 tests
 make run                      # API      → http://localhost:8000/docs
 make demo                     # dashboard → http://localhost:8501
 ```
@@ -314,16 +322,54 @@ Or, in one command:
 docker compose up --build     # API on :8000, dashboard on :8501
 ```
 
+**On Windows without `make`** (it is not bundled with Git for Windows), run the
+equivalent commands directly — `make` is a convenience wrapper, not a dependency:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+$env:PYTHONPATH = $PWD
+
+.\.venv\Scripts\python.exe -m src.data_generator      # make data
+.\.venv\Scripts\python.exe -m src.graph_builder       # make graph
+.\.venv\Scripts\python.exe -m src.candidate_generator # make candidates
+.\.venv\Scripts\python.exe -m src.feature_engine      # make features
+.\.venv\Scripts\python.exe -m src.scorer              # make train
+
+.\.venv\Scripts\python.exe -m pytest                  # make test
+.\.venv\Scripts\python.exe -m uvicorn src.api:app --port 8000        # make run
+.\.venv\Scripts\python.exe -m streamlit run frontend/app.py          # make demo
+```
+
 Everything is seeded at `random_seed = 42`, and a clean clone reproduces the metrics table
 above **within the same environment**.
 
-One caveat, since we checked rather than assumed: the numbers shift slightly across Python
-and library versions. The metrics quoted here are from Python 3.13 on the host; the
-Python 3.11 container produces threshold 0.053 and a +47.5% F1 penalty instead of 0.041 and
-+17.0%. Data generation, the graph and candidate generation are bit-identical — the drift
-comes from LightGBM/NumPy version differences in the fit. The *conclusions* (cost-optimal
-beats F1-optimal, recall-favouring trade) hold in both; the third decimal place does not.
-Pin `requirements.txt` exactly if you need identical figures.
+"Within the same environment" is doing real work in that sentence, and we measured
+exactly how much. The host venv, the Docker image and CI all run **Python 3.13** against
+the same exact pins. Even so, host (Windows) and container (Linux) do not agree to the
+last decimal:
+
+| | Host · Windows 3.13 | Container · Linux 3.13 |
+|---|---:|---:|
+| Ring recall | 0.9417 | **0.9417** — identical |
+| Cost-optimal threshold | 0.041 | 0.035 |
+| Precision @ threshold | 0.869 | 0.864 |
+| Recall @ threshold | 0.964 | **0.964** — identical |
+| F1-threshold cost penalty | +17.0% | +27.8% |
+
+**Everything deterministic is bit-identical**: data generation, the identity graph,
+candidate generation and ring recall match exactly. The drift is confined to the
+LightGBM fit, where OS-level BLAS and OpenMP threading differ — the model lands in a
+slightly different place, which moves the chosen threshold and therefore the F1 penalty.
+
+We are reporting this rather than quietly picking the flattering number. The *conclusions*
+hold in both environments — cost-optimal beats F1-optimal, and the trade runs toward
+recall — but the third decimal place is environment-specific, and the size of the F1
+penalty in particular (+17% vs +28%) should be read as "materially more expensive", not
+as a precise constant. The table above is measured on the host.
+
+`requirements.lock.txt` holds the full 96-package transitive freeze if you want to pin the
+environment further.
 
 **Try the API:**
 
@@ -360,7 +406,7 @@ ringfence/
 │   ├── api.py                    # FastAPI
 │   └── utils.py                  # logging, timers, determinism
 ├── frontend/  app.py + components/   # Streamlit, 5 pages
-├── tests/     110 tests
+├── tests/     114 tests
 └── demo/      pitch_script.md  qna_prep.md
 ```
 
@@ -368,7 +414,7 @@ ringfence/
 
 ## Tech Stack
 
-- Python 3.11+, FastAPI, LightGBM, NetworkX, python-louvain, Streamlit, Plotly
+- Python 3.13 (3.12+ required by the pins), FastAPI, LightGBM, NetworkX, python-louvain, Streamlit, Plotly
 - SQLite for case memory and alerts; ChromaDB is an optional vector backend
   (`RINGFENCE_USE_CHROMA=1`) — the default numpy cosine index means `make test`
   runs without a 2GB torch download
@@ -390,6 +436,11 @@ What we do not know, stated plainly:
 - **Ring recall has a hard ceiling of ~0.94** in this dataset, by construction — see the
   defector note above. Against fresh-device rings, identity edges never fire and we fall
   back to behavioural features alone.
+- **The F1-penalty figure is environment-sensitive.** +17.0% on the host (Windows) and
+  +27.8% in the Linux container, from OS-level BLAS and OpenMP threading differences in
+  the LightGBM fit — same Python, same pins. The direction is robust and the deterministic
+  stages match exactly; the magnitude should be read as "materially more expensive", not
+  as a constant.
 - **Feature ablation deltas sit near run-to-run variance.** 120 rings is not enough
   statistical power to rank individual features confidently. `notebooks/02_ablation.ipynb`
   reports family-level deltas and says so.

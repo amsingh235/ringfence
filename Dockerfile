@@ -4,7 +4,7 @@
 # imports the same pipeline modules the API does; splitting them would mean
 # maintaining two dependency sets that must not drift.
 
-FROM python:3.11-slim AS base
+FROM python:3.13-slim AS base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

@@ -15,7 +15,15 @@ BIN     := $(VENV)/bin
 ifeq ($(OS),Windows_NT)
 BIN     := $(VENV)/Scripts
 endif
-PYTHON  := $(BIN)/python
+
+# Use the venv interpreter when one exists, otherwise fall back to whatever
+# `python` is on PATH. CI installs requirements into the runner's system
+# Python and never creates a venv, so hardcoding $(BIN)/python would make
+# `make test` fail there with a confusing "No such file" rather than a test
+# failure.
+VENV_PY := $(wildcard $(BIN)/python $(BIN)/python.exe)
+PYTHON  := $(if $(VENV_PY),$(firstword $(VENV_PY)),$(PY))
+
 export PYTHONPATH := $(CURDIR)
 
 .PHONY: help setup data graph candidates features train all test lint run demo clean clean-memory docker

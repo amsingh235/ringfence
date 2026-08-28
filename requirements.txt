@@ -1,37 +1,48 @@
-# ── Ringfence core runtime ────────────────────────────────────────────────
-# Pinned loosely (>=) so the repo installs cleanly on 3.11 / 3.12 / 3.13.
-numpy>=1.26
-pandas>=2.1
-networkx>=3.2
-scikit-learn>=1.4
-lightgbm>=4.3
-python-louvain>=0.16          # Louvain community detection (imports as `community`)
+# ── Ringfence — exact pins ────────────────────────────────────────────────
+# Pinned to the exact versions every number in README.md was measured on.
+# Reproducibility is a submission bar, so this file is a specification, not a
+# suggestion: `pip install -r requirements.txt` on Python 3.12+ reproduces the
+# metrics table.
+#
+# These are the DIRECT dependencies. `requirements.lock.txt` holds the full
+# transitive freeze (96 packages) for bit-exact reproduction; install that one
+# instead if you need to match a run down to the third decimal place.
+
+# ── Core runtime ──────────────────────────────────────────────────────────
+numpy==2.5.2
+pandas==3.0.5
+networkx==3.6.1
+scikit-learn==1.9.0
+lightgbm==4.7.0
+python-louvain==0.16          # Louvain community detection (imports as `community`)
 
 # ── API layer ─────────────────────────────────────────────────────────────
-fastapi>=0.110
-uvicorn[standard]>=0.29
-pydantic>=2.6
-python-dotenv>=1.0
-httpx>=0.27                   # also used by fastapi.testclient
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+pydantic==2.13.4
+python-dotenv==1.2.3
+httpx==0.28.1                 # also used by fastapi.testclient
 
 # ── Demo dashboard ────────────────────────────────────────────────────────
-streamlit>=1.33
-plotly>=5.20
+streamlit==1.62.0
+plotly==6.9.0
 
 # ── Persistence ───────────────────────────────────────────────────────────
-joblib>=1.3
+joblib==1.5.3
 # sqlite3 is stdlib
 
-# ── LLM dossier summary (optional — system degrades to deterministic-only) ─
-openai>=1.20
+# ── LLM dossier summary (optional at runtime) ─────────────────────────────
+# Without OPENAI_API_KEY the dossier still ships with a deterministic template
+# summary; the package is pinned so the import path is stable either way.
+openai==3.3.1
 
 # ── Tests / notebooks ─────────────────────────────────────────────────────
-pytest>=8.0
-matplotlib>=3.8
-ipykernel>=6.29             # so notebooks/ are runnable straight after `make setup`
+pytest==9.1.1
+matplotlib==3.11.1
+ipykernel==7.3.0              # so notebooks/ are runnable straight after `make setup`
 
 # ── OPTIONAL heavy extras ─────────────────────────────────────────────────
 # Case memory uses a pure-numpy cosine index by default so `make test` runs
 # without a ~2GB torch download. Install these to switch on the ChromaDB
-# vector backend (auto-detected at import time, see src/case_memory.py):
+# vector backend (auto-detected at import, see src/case_memory.py):
 #   pip install "chromadb>=0.5" "sentence-transformers>=2.7"

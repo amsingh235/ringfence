@@ -1,0 +1,76 @@
+RINGFENCE — SYSTEM ARCHITECTURE
+Abuse-Ring Sentinel for Razorpay Buildathon 2026 · Track 02, AI Risk Manager
+
+A two-speed system. The identity graph is slow and batch: it fuses device, IP
+and email evidence across every merchant into a card-to-card graph. The scorer
+is fast and online: 31 features and a GBM verdict in under 40ms, with a
+fully-cited case file attached to every alert.
+
+Full design document: ../ARCHITECTURE.md
+
+┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
+│  Transaction     │───▶│  Identity Graph  │───▶│  Ring Detector   │
+│  Stream (sim)    │    │  cards ↔ devices │    │  Louvain × 6     │
+│  737,000 txns    │    │  collision-capped│    │  + CC × 4        │
+└────────┬─────────┘    └──────────────────┘    │  + identity-ego  │
+         │                                       └────────┬─────────┘
+         │              ┌─────────────────────────────────┼──────────────┐
+         │              ▼                                 ▼              ▼
+         │     ┌─────────────────┐            ┌──────────────────┐  ┌──────────────┐
+         │     │  Feature Engine │            │ Dossier Builder  │  │ Case Memory  │
+         │     │  31 features    │            │ deterministic    │  │ precedents + │
+         │     │  p99 = 32.9ms   │            │ evidence + LLM   │  │ FAILURES     │
+         │     └────────┬────────┘            └──────────────────┘  └──────────────┘
+         │              ▼
+         │     ┌─────────────────┐
+         │     │  GBM Scorer     │
+         │     │  cost-optimal   │
+         │     │  threshold      │
+         │     └────────┬────────┘
+         ▼              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      VULCAN INTEGRATION LAYER                           │
+│  composite = 1 − (1 − vulcan) × (1 − ringfence),  ± case-memory memory   │
+│  < 0.4 APPROVE    0.4–0.7 REVIEW    ≥ 0.7 BLOCK                         │
+│  Automated action requires a Ring Template with >10 confirmed precedents │
+└─────────────────────────────────────┬───────────────────────────────────┘
+                                      ▼
+                       ┌──────────────────────────┐
+                       │  Alert API  ·  FastAPI   │
+                       │  Streamlit demo, 5 pages │
+                       └──────────────────────────┘
+
+LEGEND
+------
+  Identity Graph    cards are nodes; edges are shared device / IP / email ONLY.
+                    No merchant edges: 100.0% of card pairs share a merchant,
+                    vs 0.152% sharing an identity value.
+
+  Ring Detector     recall-first ensemble. Louvain at 6 resolutions, connected
+                    components at 4 edge-weight floors, and identity-ego sets.
+                    Measured ring recall 0.942.
+
+  Feature Engine    31 features (10 structural, 8 identity, 13 behavioural)
+                    over the candidate's shared-infrastructure transactions.
+                    p99 32.9ms.
+
+  GBM Scorer        LightGBM, leave-one-world-out CV, threshold chosen by
+                    minimising rupee cost (C_fp = 2.3L, C_fn = 8.5L) rather
+                    than F1. Precision 0.869 / recall 0.964.
+
+  Dossier Builder   deterministic cited evidence first, LLM narrative second.
+                    An uncited claim cannot be constructed.
+
+  Case Memory       stores analyst verdicts BOTH ways. Confirmed ring -> +15%
+                    precedent boost. Confirmed false positive -> -20% damp.
+
+  Vulcan Layer      noisy-OR of two independent signals. Ringfence's score does
+                    not use Vulcan as a feature, so composing them is not
+                    counting one signal twice.
+
+BOUNDED AND GATED
+-----------------
+  Ringfence emits a RECOMMENDATION. It cannot block a payment, decline a card,
+  or move money. Automated action requires a Ring Template with more than 10
+  analyst-confirmed precedents; every novel-pattern BLOCK returns
+  auto_action_allowed=false and human_review_required=true.

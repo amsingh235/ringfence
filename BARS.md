@@ -102,7 +102,7 @@ Reproduce with `make all && make test`.
 | | |
 |---|---|
 | **Implementation** | `src/dossier_builder.py`, `src/vulcan_integration.py`, `src/config.py` → `GatingConfig` |
-| **Test** | `tests/test_dossier_builder.py` (14 tests), `tests/test_api.py::test_novel_pattern_never_permits_automated_action`, `tests/test_case_memory.py::test_auto_block_requires_more_than_ten_precedents` |
+| **Test** | `tests/test_dossier_builder.py` (16 tests), `tests/test_api.py::test_novel_pattern_never_permits_automated_action`, `tests/test_case_memory.py::test_auto_block_requires_more_than_ten_precedents` |
 
 **Explainable.**
 - Every alert carries a Dossier whose every claim has a citation — a graph edge, a
@@ -110,7 +110,7 @@ Reproduce with `make all && make test`.
 - `Dossier` runs a Pydantic model validator that raises
   `ValueError("Uncited claim detected")` if any evidence has an empty `citation_id`.
   **There is no bypass flag.** An uncited alert is unconstructible, not merely discouraged.
-- Measured: **0 uncited claims**, **4.8 references per claim**.
+- Measured: **0 uncited claims**, **4.0 references per claim**.
 - The composite response carries the composition formula, both input scores, the gate
   bands, the boost and damp applied, and the bounded-action rule — an analyst can
   reconstruct any decision without reading our source.
@@ -203,11 +203,11 @@ out and the transaction goes through.
 
 | | |
 |---|---|
-| **Test** | `make test` — 110 tests |
+| **Test** | `make test` — 114 tests |
 
 - `make setup && make all && make test && make run` works from a clean clone.
   `docker compose up --build` brings up the API and the dashboard together.
-- **110 tests**, covering every critical path: collision capping, the no-merchant-edge
+- **114 tests**, covering every critical path: collision capping, the no-merchant-edge
   rule, ring recall, deduplication correctness, the citation guarantee, cost-optimal
   thresholding, cross-world leakage, the false-positive damp, template gating, API
   contracts, graceful degradation, and the defense-only posture.
