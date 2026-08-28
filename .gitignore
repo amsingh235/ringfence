@@ -1,0 +1,33 @@
+# ── Secrets ───────────────────────────────────────────────────────────────
+.env
+*.pem
+*.key
+
+# ── Generated data ────────────────────────────────────────────────────────
+# transactions.csv is ~90MB at full scale. Everything under data/ is
+# reproducible from `make all` with seed 42, so none of it is committed.
+data/raw/*.csv
+data/processed/*
+data/ground_truth/*.csv
+!data/**/.gitkeep
+
+# ── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ── Notebooks ─────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── Editors / OS ──────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

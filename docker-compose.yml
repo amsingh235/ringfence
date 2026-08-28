@@ -1,0 +1,90 @@
+# Ringfence — API + dashboard, one command.
+#
+#   docker compose up --build
+#     API       → http://localhost:8000/docs
+#     Dashboard → http://localhost:8501
+#
+# The `pipeline` service builds the artifacts and exits; `api` and `demo` wait
+# for it to complete successfully before starting, so a fresh clone comes up
+# with a trained model rather than in degraded mode.
+
+services:
+  # One-shot: data → graph → candidates → features → model.
+  pipeline:
+    build: .
+    image: ringfence:latest
+    container_name: ringfence-pipeline
+    command: >
+      sh -c "python -m src.data_generator &&
+             python -m src.graph_builder &&
+             python -m src.candidate_generator &&
+             python -m src.feature_engine &&
+             python -m src.scorer"
+    volumes:
+      - ringfence-data:/app/data
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      RINGFENCE_JSON_LOGS: "1"
+
+  api:
+    build: .
+    image: ringfence:latest
+    container_name: ringfence-api
+    command: python -m uvicorn src.api:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ringfence-data:/app/data
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      RINGFENCE_JSON_LOGS: "1"
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  demo:
+    build: .
+    image: ringfence:latest
+    container_name: ringfence-demo
+    command: >
+      python -m streamlit run frontend/app.py
+      --server.port 8501 --server.address 0.0.0.0 --server.headless true
+    ports:
+      - "8501:8501"
+    volumes:
+      - ringfence-data:/app/data
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Service DNS name, not localhost — the dashboard runs in its own container.
+      RINGFENCE_API_URL: http://api:8000
+      RINGFENCE_JSON_LOGS: "1"
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully
+    # Override the image's healthcheck: it curls :8000, which this container
+    # does not serve. Streamlit exposes its own liveness endpoint.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  # Named volume so the trained model and case memory survive a restart —
+  # the failure-recovery demo depends on dispositions persisting.
+  ringfence-data:

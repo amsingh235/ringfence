@@ -1,0 +1,10 @@
+# Normalise line endings so the repo is identical on Windows, macOS and Linux.
+# Without this, a Windows clone rewrites every file to CRLF and the Docker
+# build (Linux) sees shell scripts it cannot execute.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.pkl binary
+*.gpickle binary
+*.sqlite binary
