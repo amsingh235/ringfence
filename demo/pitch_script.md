@@ -1,8 +1,9 @@
 # Ringfence — 5-Minute Pitch Script
 
-**Setup before you start:** `make all` has run, `make run` and `make demo` are up, browser
-on the dashboard **page 1**, terminal visible for one curl. Clear case memory first
-(`make clean-memory`) so the failure demo on page 5 is re-armed.
+**Setup before you start:** see **[RUNBOOK.md](RUNBOOK.md)** for the full pre-flight,
+window layout, switch map and click paths. In short: `make all` has run, `make run` and
+`make demo` are up, browser on the dashboard **page 1**, terminal visible for one command.
+Run `make clean-memory` first so the failure demo on page 5 is re-armed.
 
 Timings are read-aloud tested. Total: **5:00**.
 
@@ -50,10 +51,12 @@ Timings are read-aloud tested. Total: **5:00**.
 
 ## 1:15 – 2:00 · The dossier
 
-*[Click "Open →" on the top BLOCK alert. Land on page 2.]*
+*[Filter Recommendation → BLOCK. Click "Open →" on the top row. Sidebar → page 2.]*
 
-> This is an alert. Ringfence score 0.91. Vulcan on the same activity: 0.34. Composite:
-> **0.94 — block.**
+> This is an alert. Ringfence scores the cluster at **one point oh**. Vulcan, on the same
+> activity, **point three-eight**. Composite: **block.**
+
+*[Read those three numbers off the screen — they shift between BLOCK rows.]*
 >
 > Here's the timeline — log scale, because the story is four orders of magnitude wide.
 > Blue is probes under ten rupees. Red is cashouts over ten thousand. Same device pool,
@@ -107,20 +110,24 @@ Timings are read-aloud tested. Total: **5:00**.
 
 *[Page 5.]*
 
-> Now the failure. This candidate scored 0.94 and blocked. Ground truth says it's **not a
-> ring** — it's a household sharing one tablet. Four recharges in three minutes, then a
-> six thousand rupee appliance an hour later. Same device, same compressed timing, same
-> escalation direction. Two of our four ring signatures fire.
+> Now the failure. This is the highest-scoring thing the model got wrong — picked by the
+> labels, not chosen by me. Ground truth says it's **not a ring**: it's a household sharing
+> one tablet. Four recharges in three minutes, then a six thousand rupee appliance an hour
+> later. Same device, same compressed timing, same escalation direction.
 >
-> **That's a real false positive and it cost us two point three lakh.**
+> Ringfence gave it **point oh one nine**. But composited with Vulcan's point three-nine it
+> still lands at **point four zero three — review.** A human has to open it.
+>
+> **That's a real false positive, and at two point three lakh a time it's a cost we own.**
 >
 > The analyst says no.
 
 *[Type a note. Click "Mark as False Positive". Page reruns.]*
 
 > Case memory stores the thirty-one dimensional behavioural signature and the reasoning.
-> And now — same pattern, scored again: **0.94 becomes 0.75.** A twenty percent damp, and
-> the new dossier carries a cited claim naming the earlier case and the similarity.
+> And now — same pattern, scored again: **point four zero three becomes point three two
+> two.** A twenty percent damp: it moves out of review and into approve, and the new
+> dossier carries a cited claim naming the earlier case and the similarity.
 >
 > That's the audit trail underneath, straight out of SQLite. Nothing here is staged — the
 > button wrote to the real database and that second score is a real second scoring pass.
@@ -139,13 +146,12 @@ Timings are read-aloud tested. Total: **5:00**.
 >
 > Ask for a card we've never seen.
 
-*[Terminal:]*
+*[Win+2 to the terminal. The command is already typed — just press Enter.]*
 ```bash
-curl -s -X POST localhost:8000/detect/candidate \
-  -H 'content-type: application/json' -d '{"cards":["CARD_NOT_REAL"]}' | jq '.degraded, .composite.recommendation'
+python demo/show_degraded.py
 ```
 
-> `true`, `"REVIEW"`. Not a five hundred. **A fraud API that errors is worse than useless
+> `degraded: True`, `recommendation: REVIEW`, HTTP two hundred. Not a five hundred. **A fraud API that errors is worse than useless
 > — the caller times out and the transaction goes through.** Missing model, unknown card,
 > LLM down, ChromaDB missing: every one of those degrades to a safe review with the reason
 > attached. A detector that cannot see escalates to a human. It never quietly approves.
@@ -159,7 +165,7 @@ curl -s -X POST localhost:8000/detect/candidate \
 
 ## 4:15 – 5:00 · The ask
 
-> One hundred and ten tests. `make setup`, `make all`, `make test`, `make run` from a clean
+> One hundred and fourteen tests. `make setup`, `make all`, `make test`, `make run` from a clean
 > clone. Every threshold, cost and band in one config file, because you were going to ask
 > where 0.7 comes from.
 >
