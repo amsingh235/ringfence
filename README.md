@@ -331,24 +331,21 @@ Or, in one command:
 docker compose up --build     # API on :8000, dashboard on :8501
 ```
 
-**On Windows without `make`** (it is not bundled with Git for Windows), run the
-equivalent commands directly — `make` is a convenience wrapper, not a dependency:
+**On Windows**, `make` is not available (it is a Unix tool and is not bundled with
+Git for Windows). Use `run.ps1`, which has the same target names:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-$env:PYTHONPATH = $PWD
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 
-.\.venv\Scripts\python.exe -m src.data_generator      # make data
-.\.venv\Scripts\python.exe -m src.graph_builder       # make graph
-.\.venv\Scripts\python.exe -m src.candidate_generator # make candidates
-.\.venv\Scripts\python.exe -m src.feature_engine      # make features
-.\.venv\Scripts\python.exe -m src.scorer              # make train
-
-.\.venv\Scripts\python.exe -m pytest                  # make test
-.\.venv\Scripts\python.exe -m uvicorn src.api:app --port 8000        # make run
-.\.venv\Scripts\python.exe -m streamlit run frontend/app.py          # make demo
+.\run.ps1 setup               # create .venv, install requirements
+.\run.ps1 all                 # data -> graph -> candidates -> features -> model
+.\run.ps1 test                # 114 tests
+.\run.ps1 run                 # API       -> http://localhost:8000/docs
+.\run.ps1 demo                # dashboard -> http://localhost:8501
 ```
+
+`.\run.ps1` with no argument lists every target. It is a convenience wrapper over
+`python -m src.<stage>`, exactly like the Makefile — neither is a dependency.
 
 Everything is seeded at `random_seed = 42`, and a clean clone reproduces the metrics table
 above **within the same environment**.

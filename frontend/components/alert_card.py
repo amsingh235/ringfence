@@ -88,8 +88,13 @@ def render_alert_queue(backend, artifacts: dict, badge) -> None:
         rows = payload["alerts"]
         source_note = f"{payload['total']} alerts from the API"
     else:
+        # Two different situations land here and they are not the same thing:
+        # the API is down, or the API is up and its alert store is empty (a
+        # fresh clone, or straight after `clean-memory`). Saying "API offline"
+        # in the second case contradicts the green badge in the sidebar.
         rows = _cached_local_queue(artifacts, 40)
-        source_note = f"{len(rows)} candidates scored locally (API offline or no alerts yet)"
+        reason = "no alerts stored yet" if payload is not None else "API offline"
+        source_note = f"{len(rows)} candidates scored locally — {reason}"
 
     # --- filter ---------------------------------------------------------
     if rec_filter != "All":

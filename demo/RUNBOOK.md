@@ -1,105 +1,121 @@
 # Ringfence — Recording Runbook
 
 The operator's half of the pitch. [pitch_script.md](pitch_script.md) is what you *say*;
-this is what you *open, click and press*, second by second.
+this is what you *open, click and press*. The same thing formatted to read from while
+recording is [Ringfence_Video_Script.docx](Ringfence_Video_Script.docx).
 
-Every number quoted here was read off the running app, not off a doc. Where the old
-script and the live app disagreed, **the app wins** — see [Corrected numbers](#6--corrected-numbers)
-before you record.
+Every number here was read off the running app, not off a doc. Where the old script and
+the live app disagreed, **the app wins** — see [§6](#6--corrected-numbers) before you record.
 
 ---
 
 ## 1 · Pre-flight (T−30 minutes)
 
-Run these in order. Do not skip the clean-memory step — the failure demo only lands if
-case memory is empty.
+**`make` is a Unix tool and is not installed on Windows.** Use `run.ps1` from the repo
+root — same target names, same behaviour.
 
-```bash
-cd c:/Users/Amiya/ringfence
+**Terminal 1** — reset, test, and start the API:
 
-make clean-memory     # re-arms the failure demo AND regenerates the alert queue
-make test             # expect: 114 passed
-make run              # terminal 1 — API on :8000, leave it running
-make demo             # terminal 2 — dashboard on :8501, leave it running
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+.\.venv\Scripts\Activate.ps1
+
+.\run.ps1 clean-memory     # re-arms the failure demo - also EMPTIES the alert queue
+.\run.ps1 test             # expect: 114 passed
+.\run.ps1 run              # API on :8000 - leave this terminal alone from here
 ```
 
-Then, in the browser, walk all five pages once. You are checking three things:
+**Terminal 2** — refill the queue, then start the dashboard:
 
-- [ ] Sidebar reads **API online · ok** (green). If it says offline, the demo still works
-      off local artifacts — but you lose the "133 alerts from the API" line.
-- [ ] Page 4 shows **0.942 / 0.869 / 0.964 / 0.978 / +17%**.
-- [ ] Page 5 step 3 says **"Click the button to write this verdict into case memory"** —
-      i.e. it has *not* already been clicked. If it shows a damp already applied, run
-      `make clean-memory` again and restart `make demo`.
+```powershell
+.\.venv\Scripts\Activate.ps1
 
-> **`make clean-memory` deletes `alerts.sqlite`, and alert IDs are random UUIDs**
-> ([src/utils.py:276](../src/utils.py#L276)). Every `RF-…` id changes after a reset.
-> **Never memorise an alert id.** Use the filter rule in §4.
+python demo\seed_alerts.py --limit 150   # ~5 min. Drop --limit for all 557 (~20 min)
+.\run.ps1 demo                           # dashboard on :8501 - leave this running too
+```
+
+> **Why the seed step exists.** `clean-memory` deletes `alerts.sqlite` along with case
+> memory — that is the only way to re-arm the failure demo — and nothing refills it,
+> because an alert row is only written when something is actually scored. Skip the seed
+> and page 1 falls back to scoring 40 candidates in-process, labelled *"scored locally"*,
+> which is honest but looks broken next to a green **API online** badge. Seeding at about
+> two seconds a candidate, 150 is plenty for a convincing queue; the full 557 takes around
+> twenty minutes and buys you nothing on camera.
+
+Then walk all five pages once in the browser. You are checking four things:
+
+- [ ] Sidebar reads **API online · ok** (green)
+- [ ] Page 1 says **"… alerts from the API"** — *not* "scored locally". If it says scored
+      locally, the seed did not run or the API is down.
+- [ ] Page 4 shows **0.942 / 0.869 / 0.964 / 0.978 / +17%**
+- [ ] Page 5 step 3 still says **"Click the button to write this verdict into case
+      memory"** — if a damp is already applied, run `.\run.ps1 clean-memory` again and
+      restart the dashboard
+
+> **Alert IDs are random UUIDs** ([src/utils.py:276](../src/utils.py#L276)) and they all
+> change on every reset. **Never memorise an alert id.** Use the filter rule in §4.
 
 ---
 
-## 2 · Window layout
+## 2 · Window layout — exactly two
 
-Exactly **three** windows. Close everything else — notifications, chat, extra tabs.
+Two windows, because that is what makes **Alt+Tab** reliable: with two it is a clean
+toggle that lands correctly every time. A third window makes it cycle most-recent-first
+and it will drop you somewhere you did not expect, on camera.
 
-| Slot | Window | State |
+| Window | What | Setup |
 |---|---|---|
-| **Win+1** | Browser — dashboard, **one tab only**, `localhost:8501` | F11 fullscreen |
-| **Win+2** | Terminal — where you run `demo/show_degraded.py` | Maximised, large font |
-| **Win+3** | Terminal — `make run` API logs (optional B-roll) | Maximised |
+| **1 · Browser** | dashboard, `localhost:8501` | One tab only. **F11** for fullscreen. Zoom 100%. |
+| **2 · Terminal** | where you press Enter once, at 3:35 | Font ~18pt. Command pre-typed, **not** run. |
 
-**Pin all three to the taskbar in that order and switch with `Win+1` / `Win+2` / `Win+3`.**
-Do not rely on Alt+Tab: with three windows it cycles most-recent-first, so the second
-press lands somewhere different depending on where you just were. `Win+<n>` is
-deterministic every time. Alt+Tab is fine only as a straight toggle between two windows.
+The terminal running the API and the one running the dashboard stay **minimised** — they
+are not part of the recording. Terminal 2 above becomes your on-camera terminal once the
+dashboard is up; open a third console for it if you prefer, but keep only two windows
+*visible*.
+
+Pre-type this and leave the cursor sitting on it — the only command in the whole video:
+
+```powershell
+python demo\show_degraded.py
+```
 
 **Before you hit record:**
 
-- [ ] Browser zoom **100%**, F11 fullscreen (hides tabs, URL bar, bookmarks)
-- [ ] Terminal font bumped to ~18pt — panellists may watch on a laptop
-- [ ] `python demo/show_degraded.py` **already typed at the prompt, not yet run.** You press
-      Enter on camera. Never type a command live.
-- [ ] Windows notifications off (Win+A → Do not disturb)
-- [ ] Screen recorder capturing **the whole screen**, not a single window — window capture
-      goes black when you `Win+<n>`
+- [ ] Everything else closed; Do Not Disturb on (Win+A)
+- [ ] Recorder capturing the **whole screen**, not a single window — window capture goes
+      black the moment you Alt+Tab
 
 ---
 
-## 3 · Switch map
-
-You are in the browser for 4 of the 5 minutes. There is exactly **one** round trip out.
+## 3 · Switch map — two Alt+Tabs, total
 
 ```
-0:00 ──────────────────────────────────────────  browser, page 1
-0:30 ──────────────────────────────────────────  browser, page 1  (still)
-1:15 ── click Open → ──────────────────────────  browser, page 2
-2:00 ── sidebar 4 ─────────────────────────────  browser, page 4
-2:45 ── sidebar 5 ─────────────────────────────  browser, page 5
-3:30 ── Win+2 ─────────────────────────────────  TERMINAL   ← the only switch out
-3:50 ── Win+1 ─────────────────────────────────  browser, page 4
-4:15 ──────────────────────────────────────────  browser (talk to camera, page 4 behind you)
+0:00 – 3:35  ─────────────────────────────  BROWSER
+3:35  Alt+Tab ────────────────────────────  TERMINAL   (press Enter, read 4 lines)
+3:55  Alt+Tab ────────────────────────────  BROWSER    (stay here to the end)
 ```
 
-Say the first words of the next section *while* the switch is happening. Never switch in
-silence — dead air is what makes a reviewer close the tab.
+Within the browser you move by clicking the sidebar: page 1 → 2 at 1:10, → 4 at 2:00,
+→ 5 at 2:45, back to 4 at 3:55.
+
+Start saying the next line *while* you switch. Never switch in silence.
 
 ---
 
-## 4 · Which card to choose
+## 4 · Which exhibit to choose
 
-**Do not hunt for a good example on camera.** Two exhibits, both selected by a rule, not
-by an id.
+**Do not hunt for a good example on camera.** Both exhibits are picked by a rule, not an id.
 
-### Page 2 — the BLOCK exhibit
+### Page 2 — the BLOCK ring
 
-1. On page 1, set **Recommendation → BLOCK** (left dropdown).
-2. Click **Open →** on the **top row**.
-3. Sidebar → **2 · Dossier Viewer**.
+1. Page 1 → set **Recommendation → BLOCK** (left dropdown)
+2. Click **Open →** on the **top row**
+3. Sidebar → **2 · Dossier Viewer**
 
-That row is a genuine planted ring, and the rule survives any `make clean-memory`. Rehearse
-this exact click path — it is the only multi-step interaction in the video.
+Survives any reset. Rehearse this click path — it is the only multi-step interaction in
+the video.
 
-What you will see (a representative BLOCK ring, 6 cards):
+A representative BLOCK ring looks like this:
 
 | Field | Value |
 |---|---|
@@ -108,139 +124,63 @@ What you will see (a representative BLOCK ring, 6 cards):
 | Composite | **1.000 → BLOCK** |
 | Cards in cluster | 6 |
 | Cited claims | **14** |
-| Shared identity | 3 device fingerprints + 1 email hash |
 
-The exact figures shift a little between BLOCK rows. **Read them off the screen, don't
-recite them from memory** — say "Ringfence one point oh, Vulcan point three-eight,
-composite blocks it" only if that is what is showing.
+Figures shift between rows. **Read them off the screen; never recite from memory.**
 
-> Under the old script this click was broken: **Open →** set an `RF-…` id that the dossier
-> picker (which listed `CAND_…` ids) silently discarded, dumping you on `CAND_000000` — a
-> 12-card **APPROVE**. Fixed in [dossier_viewer.py:117](../frontend/components/dossier_viewer.py#L117).
-> If you are recording from an older checkout, pull first.
+> This click used to be broken: **Open →** set an `RF-…` id that the picker (listing
+> `CAND_…` ids) silently discarded, dumping you on a 12-card **APPROVE**. Fixed in
+> [dossier_viewer.py:117](../frontend/components/dossier_viewer.py#L117). Pull if you are
+> on an older checkout.
 
-### Page 5 — the false-positive exhibit
+### Page 5 — the false positive
 
-**Nothing to choose.** The page picks it itself: the highest-scoring true negative in the
+**Nothing to choose.** The page picks the highest-scoring true negative in the
 out-of-fold predictions ([failure_demo.py:28](../frontend/components/failure_demo.py#L28)).
-Chosen by the labels, not written in by hand — say that out loud, it is the whole point.
+Chosen by the labels, not by hand — say that out loud, it is the point.
 
-You will get **CAND_000132** — 4 cards, Ringfence **0.019**, composite **0.403 · REVIEW**.
+You get **CAND_000132** — 4 cards, Ringfence **0.019**, composite **0.403 · REVIEW**,
+dropping to **0.322 · APPROVE** after the damp.
 
 ---
 
 ## 5 · The segments
 
-### 0:00 – 0:30 · The ₹5 probe
+Full spoken text: [Ringfence_Video_Script.docx](Ringfence_Video_Script.docx) or
+[pitch_script.md](pitch_script.md). Actions only, here.
 
-**Window:** browser, page 1. **Action:** none — hands off the mouse.
+| Time | Window | Do |
+|---|---|---|
+| 0:00 – 0:30 | Browser p1 | Nothing. Hands off the mouse. Talk from frame one. |
+| 0:30 – 1:10 | Browser p1 | Slow scroll down the queue, back to top. |
+| 1:10 – 2:00 | Browser p2 | Filter BLOCK → Open → top row → sidebar 2. Scroll to the evidence table and **stop there**. |
+| 2:00 – 2:45 | Browser p4 | Sidebar 4. Scroll to the cost curve. Point at the ⭐, then the ✕. |
+| 2:45 – 3:35 | Browser p5 | Sidebar 5. Scroll to step 2. Note is pre-filled — **do not retype**. Click **Mark as False Positive**. Wait for reload. Scroll to step 3. |
+| 3:35 – 3:55 | **Terminal** | Alt+Tab. Press Enter. Point at the first two lines. |
+| 3:55 – 4:15 | Browser p4 | Alt+Tab back. Merchant-edge numbers. |
+| 4:15 – 5:00 | Browser p4 | Stop scrolling. Talk to the camera. |
 
-Read the opening of [pitch_script.md](pitch_script.md) verbatim. Start talking on frame one;
-no "okay, so". The queue sitting still behind you is the point: 133 alerts, and not one of
-them is a transaction.
+Two lines that must land exactly:
 
-### 0:30 – 1:15 · Where Ringfence sits
-
-**Window:** browser, page 1. **Action:** slow scroll down the queue, then back to top.
-
-Land the "never merchant edges" promise here so you can pay it off at 3:50.
-
-### 1:15 – 2:00 · The dossier
-
-**Action:** filter **BLOCK** → **Open →** top row → sidebar **2**.
-
-Scroll: summary → cards → timeline → **evidence table**. Park on the evidence table and stay
-there. That table is the strongest thing in the submission.
-
-Land this line exactly: *"Uncited claims: zero — not because we were careful, but because
-the `Dossier` constructor raises if a claim has no citation. There is no bypass flag."*
-Enforced at [dossier_builder.py:117](../src/dossier_builder.py#L117).
-
-### 2:00 – 2:45 · Honest metrics
-
-**Action:** sidebar **4**. Scroll to the cost curve. Point at the ⭐ and the ✕.
-
-Say only **0.942**, **0.869**, and **+17%**. Do not read the table aloud. The ⭐/✕ gap is the
-whole argument — a miss costs ₹8.5L, a false positive ₹2.3L, so a miss is worth 3.7 false
-positives and F1 is the wrong objective.
-
-Then volunteer both weaknesses (recall can't reach 1.0 because of defectors; precision is
-optimistic because the hard negatives are synthetic). Saying it before they ask is worth
-more than the decimal place.
-
-### 2:45 – 3:30 · One failure, handled
-
-**Action:** sidebar **5**. Scroll to step 2. The analyst note is pre-filled — **do not
-retype it**. Click **🚫 Mark as False Positive**. Wait for the rerun. Scroll to step 3.
-
-**Say the real numbers:**
-
-> This is the highest-scoring thing the model got wrong — picked by the labels, not by me.
-> Four cards, a household sharing one tablet. Ringfence gave it **0.019**; composited with
-> Vulcan's 0.391 it still lands at **0.403 — review**. A human has to open it, and at ₹2.3
-> lakh a false positive, that is a real cost we own.
->
-> *[click]*
->
-> Case memory stores the 31-dimensional signature and the reasoning. Same pattern, scored
-> again: **0.403 becomes 0.322.** A 20% damp — it moves out of review into approve, and the
-> new dossier carries a cited claim naming the earlier case. That wrote to real SQLite. The
-> damp is bounded at 20% from config, capped, and never enough on its own to flip a genuine
-> ring.
-
-**Do not say "0.94" or "blocked" anywhere in this segment.** Those numbers are not in the
-app and an expert panel will catch it. See §6.
-
-### 3:30 – 4:15 · Bounded, gated, doesn't fall over
-
-**Action:** `Win+2` → press **Enter** on the pre-typed command.
-
-```bash
-python demo/show_degraded.py
-```
-
-```
-HTTP status     : 200          <- not a 500
-degraded        : True
-recommendation  : REVIEW
-auto_action     : False
-```
-
-> A fraud API that errors is worse than useless — the caller times out and the transaction
-> goes through anyway. Unknown card, missing model, LLM down: every one degrades to a safe
-> review with the reason attached. Automated action needs a template with **more than ten
-> analyst-confirmed precedents**, and there's a test asserting a novel pattern can never
-> unlock it.
-
-`Win+1` back. Pay off the merchant-edge promise:
-
-> Merchant co-occurrence links **2,868,910 of 2,869,210** possible card pairs — **99.99%**.
-> Identity links **4,357**. **0.15%.** A merchant edge would be a statement about retail,
-> not about fraud. That's measured, not assumed.
-
-### 4:15 – 5:00 · The ask
-
-**Action:** none. Talk to the camera, page 4 behind you.
-
-**114 tests** (not 110). Then the ask: **Razorpay test-mode API access** — the identity layer
-is calibrated to published IEEE-CIS device quantiles, and real fingerprints have higher
-cardinality and messier collisions, which is the single biggest threat to the precision
-number you just showed. Close on: *"It doesn't replace Vulcan. It completes it."*
+- **1:10** — *"Uncited claims: zero. Not because we were careful — because the dossier
+  refuses to be built if a claim has no citation. There is no bypass flag."*
+  Enforced at [dossier_builder.py:117](../src/dossier_builder.py#L117).
+- **3:55** — merchant co-occurrence links **2,868,910 of 2,869,210** card pairs
+  (**99.99%**); identity links **4,357** (**0.15%**).
 
 ---
 
 ## 6 · Corrected numbers
 
-Claims in the original pitch script that do **not** match the running app. Recite the
-right-hand column.
+Claims in the original pitch script that do **not** match the running app.
 
-| Segment | Old script says | The app actually shows |
+| Where | Old script said | The app shows |
 |---|---|---|
 | 2:45 failure demo | "scored **0.94** and blocked" | Ringfence **0.019**, composite **0.403 · REVIEW** |
-| 2:45 failure demo | "**0.94 becomes 0.75**" | **0.403 becomes 0.322** (REVIEW → APPROVE) |
+| 2:45 failure demo | "**0.94** becomes **0.75**" | **0.403 → 0.322** (REVIEW → APPROVE) |
 | 4:15 the ask | "**110** tests" | **114** tests |
-| 3:30 degraded call | `curl … \| jq …` | `jq` is **not installed** — use `python demo/show_degraded.py` |
-| 1:15 dossier | "Ringfence 0.91, composite 0.94" | Read the live values; a typical BLOCK row is **1.000 / 0.383 / 1.000** |
+| 3:35 degraded call | `curl … \| jq …` | `jq` is not installed — `python demo\show_degraded.py` |
+| 1:10 dossier | "Ringfence 0.91, composite 0.94" | Read live values; typical BLOCK row is **1.000 / 0.383 / 1.000** |
+| every command | `make …` | `make` is not on Windows — `.\run.ps1 …` |
 
 ---
 
@@ -248,10 +188,11 @@ right-hand column.
 
 | Symptom | Do this, out loud |
 |---|---|
-| Sidebar says **API offline** | Keep going. "The dashboard falls back to local artifacts when the API is down — that's the degradation story I'm about to show you." Turning the fault into the feature beats the moment you lost. |
-| **Open →** lands on the wrong dossier | You're on an old checkout. Stop, `git pull`, restart `make demo`. |
-| Page 5 shows a damp already applied | Case memory wasn't cleared. `make clean-memory`, restart `make demo`. |
-| `show_degraded.py` says unreachable | `make run` died. Skip to the merchant-edge numbers; they need no API. |
+| Page 1 says "scored locally" | The seed did not run. Not fatal — the queue is real either way. Keep going; nobody but you knows. |
+| Sidebar says **API offline** | Keep going. "The dashboard falls back to local files when the API is down — that's the degradation story I'm about to show you." The fault becomes the feature. |
+| **Open →** opens the wrong case file | Old checkout. Stop, `git pull`, restart the dashboard. |
+| Page 5 already shows a damp | Case memory not cleared. `.\run.ps1 clean-memory`, reseed, restart. |
+| `show_degraded.py` unreachable | API died. Skip to the merchant-edge numbers — they need nothing running. |
 | You stumble | **Keep going.** Never restart mid-take. |
 
 ---
@@ -260,19 +201,18 @@ right-hand column.
 
 - Start speaking on frame one. No "uhh, okay, so".
 - Louder than feels natural — laptop mics compress quiet voices.
-- No pause longer than 2 seconds.
+- No pause longer than two seconds.
 - **End at 4:55–5:00.** Under is fine. Over is disqualifying.
-- Three takes, pick the best. Do not chase perfection.
-- If you must cut: drop 0:30–1:15 (architecture) and 3:30–4:15 (degradation).
-  **Never cut the dossier or the failure recovery** — those are the two things almost
-  nobody else will have.
+- Three takes, pick the best first fifteen seconds.
+- If you must cut: drop 0:30–1:10 and 3:35–4:15. **Never cut the dossier or the failure
+  recovery** — those two are why this submission is different.
 
 ---
 
 ## 9 · After recording
 
-- [ ] Watch the first 15 seconds only. If the hook doesn't land, that take is dead.
+- [ ] Watch only the first fifteen seconds. If the hook does not land, that take is dead.
 - [ ] Upload; title and description are in [../FORM_ANSWERS.md](../FORM_ANSWERS.md).
-- [ ] Paste the link into [../SUBMISSION.md](../SUBMISSION.md) (Video row).
+- [ ] Paste the link into the Video row of [../SUBMISSION.md](../SUBMISSION.md).
 - [ ] `git add -A && git commit -m "submission: video link" && git push`
 - [ ] Fill the form from [../FORM_ANSWERS.md](../FORM_ANSWERS.md). Paste — do not improvise.

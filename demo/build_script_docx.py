@@ -189,25 +189,38 @@ r.font.color.rgb = RED
 # ── Before you record ─────────────────────────────────────────────────────
 h2("Before you press record")
 
-note("Run these four lines, then leave both terminals alone for the rest of the session.")
-mono("make clean-memory        make test        make run        make demo")
+note("There is no “make” on Windows — that is a Unix tool. Use run.ps1, which does the "
+     "same jobs. Open TERMINAL 1 in the project folder and run these three, top to bottom. "
+     "The last one keeps running; leave it alone.")
+mono(".\\run.ps1 clean-memory\n.\\run.ps1 test\n.\\run.ps1 run")
 
-note("make clean-memory is not optional — the failure demo at 2:45 only works if case "
-     "memory is empty. Then open the dashboard and click through all five pages once.")
+note("If PowerShell refuses to run the script, this one line unblocks it for the current "
+     "window only:")
+mono("Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned")
+
+note("Now open TERMINAL 2 and run these two. The seed step refills the alert queue, which "
+     "clean-memory empties — without it page 1 says “scored locally” next to a green "
+     "“API online” badge, which looks broken. 150 takes about five minutes and is plenty; "
+     "drop the --limit for all 557 and it takes about twenty.")
+mono("python demo\\seed_alerts.py --limit 150\n.\\run.ps1 demo")
+
+note("Then open the dashboard and click through all five pages once. Four things to check:")
 
 bullets([
     ("Sidebar says API online · ok", "  (green box, top left)"),
+    ("Page 1 says “… alerts from the API”", "  — NOT “scored locally”. If it says scored "
+     "locally, the seed did not run."),
     ("Page 4 shows", "  0.942 / 0.869 / 0.964 / 0.978 / +17%"),
     ("Page 5 still says", "  “Click the button to write this verdict into case memory” — "
-     "if it already shows a damp, run make clean-memory again"),
+     "if it already shows a damp, run clean-memory again, reseed, and restart the dashboard"),
 ])
 
 # ── Two windows ───────────────────────────────────────────────────────────
 h2("Open exactly two windows")
 
 note("Two windows is the whole trick. With only two, Alt+Tab is a clean toggle — it lands "
-     "in the right place every single time. Add a third window and Alt+Tab starts cycling "
-     "most-recent-first and will drop you somewhere you did not expect, on camera.")
+     "in the right place every single time. Add a third VISIBLE window and Alt+Tab starts "
+     "cycling most-recent-first and will drop you somewhere you did not expect, on camera.")
 
 simple_table([
     ["Window", "What it is", "How to set it up"],
@@ -218,9 +231,13 @@ simple_table([
 ], [1.0, 2.0, 3.6])
 
 spacer(6)
-note("This is the one line to type into the terminal beforehand. Type it, then leave the "
-     "cursor sitting there. It is the only command in the whole video.")
-mono("python demo/show_degraded.py")
+note("The two terminals running the API and the dashboard must stay MINIMISED. They are "
+     "not part of the video, and if they are visible Alt+Tab stops being a toggle. "
+     "Minimise them and forget them.")
+
+note("Type this into window 2 beforehand and leave the cursor sitting on it. Do not press "
+     "Enter. It is the only command in the whole video.")
+mono("python demo\\show_degraded.py")
 
 note("Close everything else. Turn on Do Not Disturb (Win + A). Record the WHOLE SCREEN, "
      "not a single window — window capture goes black the moment you Alt+Tab.")
