@@ -5,6 +5,15 @@
 > **Track 02 — AI Risk Manager** | Sub-direction: Abuse-ring sentinel
 > Strictly defensive. This system observes and recommends. It cannot block a payment, decline a card, or move money.
 
+### 30-Second Scan
+
+- **🎯 Problem** — Razorpay Vulcan scores 3,000 signals *per transaction*, but fraud rings live *between* transactions: shared device pools, probe-then-cashout, cross-merchant velocity.
+- **🔧 Solution** — Cross-merchant identity graph → recall-first candidate generation → cost-optimal GBM → deterministic evidence-cited dossier → case memory that learns from analyst rejections.
+- **📊 Metrics** — **0.942** ring recall · **0.869** precision / **0.964** recall @ cost-optimal threshold · **0.978** PR-AUC · **32.9 ms** p99 features · **114** tests passing. All out-of-fold, leave-one-world-out CV.
+- **🛡️ Bars** — Defense-only, explainable, bounded, gated, full audit trail, one failure handled live. Mapped file-by-file in **[BARS.md](BARS.md)**.
+- **🚀 Deploy** — `docker compose up --build` → API on **:8000** + demo dashboard on **:8501**.
+- **🧭 Reviewers start here** — **[SUBMISSION.md](SUBMISSION.md)** (bar → evidence table) · **[BARS.md](BARS.md)** · **[ARCHITECTURE.md](ARCHITECTURE.md)**
+
 ---
 
 ## The Problem (in one transaction)
@@ -305,7 +314,7 @@ references for each claim.
 ## Run It Locally
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/amsingh235/ringfence.git
 cd ringfence
 cp .env.example .env          # optional: add OPENAI_API_KEY for the LLM summary
 
@@ -379,6 +388,25 @@ curl -s -X POST localhost:8000/detect/candidate \
   -H 'content-type: application/json' \
   -d '{"cards":["CARD_000311","CARD_000418","CARD_000502"]}' | jq '.composite, .dossier_quality'
 ```
+
+---
+
+## Screenshots
+
+Captured from a live run — API online, 133 real alerts, all numbers computed from the
+artifacts `make all` produces.
+
+| | |
+|---|---|
+| **1 · Live Alert Queue** — every row is a candidate *card cluster*, not a transaction | **2 · Dossier Viewer** — a BLOCK ring with 14 cited claims |
+| ![Alert Queue](docs/screenshots/alert_queue.png) | ![Dossier Viewer](docs/screenshots/dossier_viewer.png) |
+| **3 · Network Explorer** — cards are nodes, edges are shared identity, no merchant edges | **4 · Metrics** — recall-first ablation and the cost curve |
+| ![Network Explorer](docs/screenshots/network_explorer.png) | ![Metrics](docs/screenshots/metrics_dashboard.png) |
+
+**5 · Failure Recovery** — one false positive followed from the queue into case memory and
+back out again, with the score moving.
+
+![Failure Recovery](docs/screenshots/failure_recovery.png)
 
 ---
 

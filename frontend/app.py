@@ -206,7 +206,10 @@ def main() -> None:
 
         if backend.online:
             status = backend.health.get("status", "unknown")
-            st.success(f"API online · {status}") if status == "ok" else st.warning(f"API online · {status}")
+            if status == "ok":
+                st.success(f"API online · {status}")
+            else:
+                st.warning(f"API online · {status}")
             st.caption(f"model `{backend.health.get('model_version', '?')}`")
         else:
             st.info("API offline — reading local artifacts")

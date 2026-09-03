@@ -114,13 +114,20 @@ def render_dossier_page(backend, artifacts: dict, badge) -> None:
     with picker:
         candidates = artifacts.get("candidates") or []
         options = [c.candidate_id for c in candidates]
+        # An alert opened from the Alert Queue arrives as an RF-… id, which is not in
+        # the local candidate list. Surface it as its own option, otherwise the
+        # index lookup below misses and silently resets the page to candidate 0 —
+        # the "Open →" button would appear to do nothing.
+        if alert_id and alert_id not in options:
+            options.insert(0, alert_id)
         if options:
             default = options.index(alert_id) if alert_id in options else 0
             chosen = st.selectbox("Candidate / alert", options, index=default,
                                   help="Or click 'Open →' on the Alert Queue page")
             if chosen != alert_id:
                 alert_id = chosen
-                cards = list(next(c for c in candidates if c.candidate_id == chosen).cards)
+                match = next((c for c in candidates if c.candidate_id == chosen), None)
+                cards = list(match.cards) if match else None
                 st.session_state.selected_alert, st.session_state.selected_cards = alert_id, cards
 
     if not alert_id:
