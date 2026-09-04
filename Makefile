@@ -26,7 +26,7 @@ PYTHON  := $(if $(VENV_PY),$(firstword $(VENV_PY)),$(PY))
 
 export PYTHONPATH := $(CURDIR)
 
-.PHONY: help setup data graph candidates features train all test lint run demo clean clean-memory docker
+.PHONY: help setup data graph candidates features train all test lint run demo clean clean-memory reset-demo docker
 
 help:
 	@echo "Ringfence — Abuse-Ring Sentinel"
@@ -107,3 +107,8 @@ clean:
 clean-memory:
 	rm -f data/processed/case_memory.sqlite data/processed/alerts.sqlite
 	@echo "Case memory cleared — the failure-recovery demo is re-armed."
+
+# Between takes: re-arm the failure demo and clear analyst dispositions while
+# keeping the seeded alert queue, which takes minutes to rebuild.
+reset-demo:
+	$(PYTHON) demo/reset_demo.py

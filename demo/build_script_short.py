@@ -87,9 +87,18 @@ r.font.bold = True
 p = doc.add_paragraph()
 p.paragraph_format.space_after = Pt(4)
 r = p.add_run("Grey = do, never read.   Alt+Tab twice: out at 3:35, back at 3:55.   "
-              "796 words, 4:49.   End by 5:00.")
+              "795 words, 4:49.   End by 5:00.")
 r.font.size = Pt(10)
 r.font.italic = True
+r.font.color.rgb = RED
+
+p = doc.add_paragraph()
+p.paragraph_format.space_after = Pt(4)
+r = p.add_run("BETWEEN TAKES: .\\run.ps1 reset-demo  then restart the dashboard. "
+              "The 2:45 click writes to a real database — without a reset the next take "
+              "shows the after-numbers before you press anything.")
+r.font.size = Pt(10)
+r.font.bold = True
 r.font.color.rgb = RED
 
 # ── 0:00 ──────────────────────────────────────────────────────────────────

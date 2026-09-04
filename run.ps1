@@ -20,7 +20,7 @@ param(
     [Parameter(Position = 0)]
     [ValidateSet('help', 'setup', 'data', 'graph', 'candidates', 'features', 'train',
                  'all', 'small', 'test', 'lint', 'run', 'demo', 'docker',
-                 'clean', 'clean-memory')]
+                 'clean', 'clean-memory', 'reset-demo')]
     [string]$Target = 'help'
 )
 
@@ -75,7 +75,8 @@ switch ($Target) {
         Write-Host '  .\run.ps1 test          run the test suite (114 tests)'
         Write-Host '  .\run.ps1 run           start the API on :8000'
         Write-Host '  .\run.ps1 demo          start the dashboard on :8501'
-        Write-Host '  .\run.ps1 clean-memory  reset case memory (re-arms the failure demo)'
+        Write-Host '  .\run.ps1 reset-demo    re-arm the failure demo, KEEPING the alert queue'
+        Write-Host '  .\run.ps1 clean-memory  reset case memory AND the alert queue'
         Write-Host '  .\run.ps1 clean         remove all generated artifacts'
         Write-Host ''
         Write-Host ('interpreter: {0}' -f $py) -ForegroundColor DarkGray
@@ -134,5 +135,12 @@ switch ($Target) {
     'clean-memory' {
         Remove-IfPresent @('data\processed\case_memory.sqlite', 'data\processed\alerts.sqlite')
         Write-Host 'Case memory cleared - the failure-recovery demo is re-armed.' -ForegroundColor Green
+        Write-Host 'The alert queue is now empty: run  python demo\seed_alerts.py --limit 150' -ForegroundColor Yellow
+    }
+
+    'reset-demo' {
+        # Between takes: re-arm the failure demo and drop analyst dispositions
+        # without destroying the seeded queue, which costs minutes to rebuild.
+        Invoke-Py demo\reset_demo.py
     }
 }

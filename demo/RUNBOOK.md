@@ -55,6 +55,25 @@ Then walk all five pages once in the browser. You are checking four things:
 > **Alert IDs are random UUIDs** ([src/utils.py:276](../src/utils.py#L276)) and they all
 > change on every reset. **Never memorise an alert id.** Use the filter rule in §4.
 
+### Between takes — every take burns the failure demo
+
+Clicking **Mark as False Positive** writes a real row to case memory. On the next take
+page 5 already shows **0.403 → 0.322** before you press anything, and pressing it changes
+nothing on camera. It also leaves a disposition on the alert, so page 1 reports
+*"Dispositioned: 1"* and annotates the row *"analyst: false positive"*.
+
+So after **every** take:
+
+```powershell
+.\run.ps1 reset-demo      # seconds - keeps the seeded queue
+```
+
+then restart the dashboard (Ctrl+C in its terminal, `.\run.ps1 demo`) so Streamlit drops
+its cached queue, and hard-refresh the browser.
+
+Use `reset-demo`, not `clean-memory`: `clean-memory` also deletes the alert queue and
+costs you another five-minute reseed.
+
 ---
 
 ## 2 · Window layout — exactly two
