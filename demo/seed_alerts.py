@@ -25,6 +25,12 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
+
+# Make `src` importable from any shell, without relying on PYTHONPATH.
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 API = "http://localhost:8000"
 
@@ -53,8 +59,8 @@ def main() -> int:
         print(f"API unreachable at {API} — start it first (.\\run.ps1 run).  {exc}")
         return 1
 
-    if not health.get("ready"):
-        print(f"warning: API reports ready=False ({health.get('errors')}) — seeding anyway")
+    if health.get("status") != "ok":
+        print(f"warning: API status={health.get('status')!r} errors={health.get('errors')} — seeding anyway")
 
     from src.candidate_generator import load_candidates
 
