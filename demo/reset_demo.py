@@ -17,15 +17,90 @@ This clears both and leaves the alert rows alone.
 
     python demo/reset_demo.py
 
+Works from any shell with no PYTHONPATH. If the compose stack is running, it
+resets the CONTAINER's databases (the ones the dashboard at :8501 actually
+reads) and restarts the dashboard; pass --local to force the host copy.
+
 Safe to run between takes. Restart the dashboard afterwards so Streamlit drops
 its cached queue.
 """
 from __future__ import annotations
 
+import os
+import shutil
 import sqlite3
+import subprocess
 import sys
+from pathlib import Path
 
-from src.config import ALERTS_DB, CASE_MEMORY_DB
+# Make `src` importable no matter where this is launched from, so the script
+# does not depend on PYTHONPATH being set in the caller's shell.
+# When piped into a container over stdin there is no __file__; the image sets
+# PYTHONPATH=/app and runs from /app, so the cwd is the project root there.
+ROOT = Path(__file__).resolve().parent.parent if "__file__" in globals() else Path.cwd()
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.config import ALERTS_DB, CASE_MEMORY_DB  # noqa: E402
+
+
+def _reset_inside_docker() -> bool:
+    """
+    If the demo is running in Docker, reset THAT copy of the databases.
+
+    The compose stack keeps its data in a named volume, not in the host's
+    data/ directory. Resetting the host files while the dashboard at :8501 is
+    served from a container would print "cleared" and change nothing on
+    screen. So when the api container is up, re-run this script inside it.
+
+    Returns True if the reset was delegated to the container.
+    """
+    if "--local" in sys.argv or os.environ.get("RINGFENCE_RESET_LOCAL") == "1":
+        return False
+    docker = _find_docker()
+    if docker is None:
+        return False
+    try:
+        probe = subprocess.run(
+            [docker, "compose", "ps", "--status", "running", "--services"],
+            cwd=ROOT, capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    if probe.returncode != 0 or "api" not in probe.stdout.split():
+        return False
+
+    print("demo is running in Docker -> resetting the container's databases")
+    # Pipe this script's own source in, so it works even if the image was built
+    # before this file existed. RINGFENCE_RESET_LOCAL stops the inner run from
+    # trying to delegate to Docker again.
+    source = Path(__file__).read_text(encoding="utf-8") if "__file__" in globals() else ""
+    result = subprocess.run(
+        [docker, "compose", "exec", "-T", "-e", "RINGFENCE_RESET_LOCAL=1", "api", "python", "-"],
+        cwd=ROOT, input=source, text=True, encoding="utf-8",
+    )
+    if result.returncode == 0:
+        print("restarting the dashboard container so Streamlit drops its cache")
+        subprocess.run([docker, "compose", "restart", "demo"], cwd=ROOT, capture_output=True)
+    return True
+
+
+def _find_docker() -> str | None:
+    """
+    Locate the docker CLI. PATH first; then Docker Desktop's install location,
+    because some shells (Git Bash launching a venv python) do not expose it.
+    """
+    found = shutil.which("docker")
+    if found:
+        return found
+    for candidate in (
+        Path(r"C:/Program Files/Docker/Docker/resources/bin/docker.exe"),
+        Path("/usr/local/bin/docker"),
+        Path("/usr/bin/docker"),
+    ):
+        if candidate.exists():
+            return str(candidate)
+    return None
 
 
 def main() -> int:
@@ -76,4 +151,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if _reset_inside_docker():
+        sys.exit(0)
     sys.exit(main())
